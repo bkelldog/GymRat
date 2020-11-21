@@ -46,7 +46,7 @@ public class User {
     public String getRace(){return race;}
 
     public void setGender(String gender){this.gender = gender;}
-    private String getGender(){return gender;}
+    public String getGender(){return gender;}
 
     public void setAge(int age){this.age = age;}
     public void setAge(String age){this.age = Integer.parseInt(age);}
