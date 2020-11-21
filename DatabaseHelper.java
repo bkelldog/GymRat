@@ -6,10 +6,10 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+
 import java.util.ArrayList;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
-
     ArrayList<String> userIDList = new ArrayList<String>();
 
     private static final String LOG = "DATABASEHELPER";
@@ -21,16 +21,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     //                              3. Holds the list of brother IDs for each user
     //
     //  Tables 2 and 3 are because the PR list and Brothers list are otherwise very difficult to
-    //  Put all together in one table. Lists will coordinate through the IDs.
+    //  put all together in one table. Lists will coordinate through the IDs.
 
     //Common to all tables
     private static final String KEY_ID = "id";
 
     //User Table
+    // __________________________________________________________________
+    // |ID|firstname|lastname|email|password|race|gender|   |   |   |    |
+    // |  |         |        |     |        |    |      |   |   |   |    |
+    // |  |         |        |     |        |    |      |   |   |   |    |
+    // |__|_________|________|_____|________|____|______|___|___|___|____|
     private static final String USER_TABLE_NAME = "user_table";
-    private static final String KEY_NAME = "name";
+    private static final String KEY_FIRST_NAME = "first_name";
+    private static final String KEY_LAST_NAME = "last_name";
     private static final String KEY_EMAIL = "email";
-    private static final String CREATE_USER_TABLE = "CREATE TABLE IF NOT EXISTS " + USER_TABLE_NAME + " (" + KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " + KEY_NAME + " TEXT);";
+    private static final String KEY_PASSWORD = "password";
+    private static final String KEY_RACE = "race";
+    private static final String KEY_GENDER = "gender";
+    private static final String CREATE_USER_TABLE = "CREATE TABLE IF NOT EXISTS " + USER_TABLE_NAME + " (" +
+            KEY_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            KEY_FIRST_NAME + " TEXT, " +
+            KEY_LAST_NAME + " TEXT, " +
+            KEY_EMAIL + " TEXT, " +
+            KEY_PASSWORD + " TEXT, " +
+            KEY_RACE + " TEXT, " +
+            KEY_GENDER + " TEXT);";
 
     //PR Table
     private static final String PR_TABLE_NAME = "pr_table";
@@ -39,12 +55,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DEADLIFT_PR = "deadlift_pr";
     private static final String ROW_PR = "row_pr";
     private static final String MILE_PR = "mile_pr";
-    private static final String CREATE_PR_TABLE = "CREATE TABLE IF NOT EXISTS " + PR_TABLE_NAME + " (" + KEY_ID + " INTEGER, " +
-                                                    BENCH_PR + " INTEGER, " +
-                                                    SQUAT_PR + " INTEGER, " +
-                                                    DEADLIFT_PR + " INTEGER, " +
-                                                    ROW_PR + " INTEGER, " +
-                                                    MILE_PR + " INTEGER);";
+    private static final String CREATE_PR_TABLE = "CREATE TABLE IF NOT EXISTS " + PR_TABLE_NAME + " (" +
+            KEY_ID + " INTEGER, " +
+            BENCH_PR + " INTEGER, " +
+            SQUAT_PR + " INTEGER, " +
+            DEADLIFT_PR + " INTEGER, " +
+            ROW_PR + " INTEGER, " +
+            MILE_PR + " INTEGER);";
 
     //Brothers Table
     public static final String BROTHERS_TABLE_NAME = "brothers_table";
@@ -56,7 +73,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public DatabaseHelper(Context context)
     {
         super(context, DATABASE_NAME, null, VERSION);
-
+        Log.d("TAG", "DATABASE INITIALIZE");
     }
 
     @Override
@@ -70,33 +87,58 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion)
     {
-        db.execSQL("DROP TABLE IF EXISTS '" + USER_TABLE_NAME + "'");
-        db.execSQL("DROP TABLE IF EXISTS '" + PR_TABLE_NAME + "'");
-        db.execSQL("DROP TABLE IF EXISTS '" + BROTHERS_TABLE_NAME + "'");
+        db.execSQL("DROP TABLE IF EXISTS " + USER_TABLE_NAME + "");
+        db.execSQL("DROP TABLE IF EXISTS " + PR_TABLE_NAME + "");
+        db.execSQL("DROP TABLE IF EXISTS " + BROTHERS_TABLE_NAME + "");
         onCreate(db);
     }
 
-    public void addUser(User u)
+    public int getIDByEmail(String email)
+    {
+        //We will assume that the name is the first name
+        SQLiteDatabase db = this.getWritableDatabase();
+        String query = "SELECT " + KEY_ID + " FROM " + USER_TABLE_NAME + " WHERE " + KEY_EMAIL + " = '" + email + "';";
+        Cursor c = db.rawQuery(query, null);
+
+        Integer id = null;
+        if (c.moveToFirst())
+        {
+            id = c.getInt(c.getColumnIndex(KEY_ID));
+        }
+        c.close();
+
+        return id;
+    }
+
+    public boolean addUser(User u)
     {
         SQLiteDatabase db = this.getWritableDatabase();
 
         //1. Add user data to USER_TABLE
         ContentValues values = new ContentValues();
-        values.put(KEY_NAME, u.getName());
-        //db.insert(USER_TABLE_NAME, null, values);
-        db.insertWithOnConflict(USER_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        values.put(KEY_FIRST_NAME, u.getFirstName());
+        values.put(KEY_LAST_NAME, u.getLastName());
+        values.put(KEY_EMAIL, u.getEmail());
+        values.put(KEY_PASSWORD, u.getPassword());
+        values.put(KEY_RACE, u.getRace());
+        values.put(KEY_GENDER, u.getGender());
+        db.insert(USER_TABLE_NAME, null, values);
+        //db.insertWithOnConflict(USER_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 
         //Get User ID
         int id = -1;
-        String query  = "SELECT * FROM " + USER_TABLE_NAME + " WHERE " + KEY_NAME + " = " + u.getName();
+        String query  = "SELECT * FROM " + USER_TABLE_NAME + " WHERE " + KEY_EMAIL + " = '" + u.getEmail() + "';";
         Cursor c = db.rawQuery(query, null);
         if (c.moveToFirst())
         {
             id = c.getInt(c.getColumnIndex(KEY_ID));
         }
-
         if (id == -1)
-            return;
+            return false;
+        u.setID(id);
+        values = new ContentValues();
+        values.put(KEY_ID, u.getID());
+        db.insert(USER_TABLE_NAME, null, values);
 
         //2. Add user PR list to PR_TABLE
         values = new ContentValues();
@@ -124,17 +166,73 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             }
             values.put(col, pr_list[i]);
         }
-        db.insertWithOnConflict(PR_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        db.insert(PR_TABLE_NAME, null, values);
+        //db.insertWithOnConflict(PR_TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 
         //3. Add brothers list to BROTHER_TABLE
         values = new ContentValues();
         values.put(KEY_ID, id);
-        //ArrayList<String> brotherIDList = u.getBrothersList();
+        ArrayList<String> brotherIDList = u.getBrothersList();
+        String brother_key = "brother_";
+        for (int i = 0; i < brotherIDList.size(); i++)
+            values.put(brother_key + "" +  i, id);
+        db.insert(BROTHERS_TABLE_NAME, null, values);
+
+        c.close();
+        return true;
     }
 
-    public void updateUser()
+    public void updateUser(String email, String col, String value)
     {
+        if (!isColumn(col))
+            return;
+        String query = "UPDATE " + USER_TABLE_NAME + " SET " + col + " = '" + value + "' WHERE " + KEY_EMAIL + " = '" + email + "';";
+        this.getWritableDatabase().execSQL(query);
+    }
 
+    public void updateUser(User u)
+    {
+        String email = u.getEmail();
+        if (email != null)
+        {
+            updateUser(email, KEY_ID, "" + u.getID());
+            updateUser(email, KEY_FIRST_NAME, u.getFirstName());
+            updateUser(email, KEY_LAST_NAME, u.getLastName());
+            updateUser(email, KEY_EMAIL, u.getEmail());
+            updateUser(email, KEY_PASSWORD, u.getPassword());
+            updateUser(email, KEY_RACE, u.getRace());
+            updateUser(email, KEY_GENDER, u.getGender());
+        }
+        else
+        {
+            this.getWritableDatabase().execSQL("UPDATE " + USER_TABLE_NAME + " SET " + KEY_ID + " = '" + u.getID() + " WHERE " );
+        }
+    }
+
+    public void updateUsers(ArrayList<User> userList)
+    {
+        for (User u : userList)
+            updateUser(u);
+    }
+
+    private boolean isColumn(String col)
+    {
+        switch(col)
+        {
+            case KEY_FIRST_NAME:
+                return true;
+            case KEY_LAST_NAME:
+                return true;
+            case KEY_EMAIL:
+                return true;
+            case KEY_PASSWORD:
+                return true;
+            case KEY_RACE:
+                return true;
+            case KEY_GENDER:
+                return true;
+        }
+        return false;
     }
 
     public ArrayList<User> getAllUsers()
@@ -149,201 +247,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             do {
                 User u = new User();
                 u.setID(c.getInt(c.getColumnIndex(KEY_ID)));
-                u.setName(c.getString(c.getColumnIndex(KEY_NAME)));
+                u.setFirstName(c.getString(c.getColumnIndex(KEY_FIRST_NAME)));
+                u.setLastName(c.getString(c.getColumnIndex(KEY_LAST_NAME)));
+                u.setEmail(c.getString(c.getColumnIndex(KEY_EMAIL)));
+                u.setPassword(c.getString(c.getColumnIndex(KEY_PASSWORD)));
+                userList.add(u);
             } while (c.moveToNext());
         }
         c.close();
         return userList;
     }
 
+    public ArrayList<String> getBrothersList(String email)
+    {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT * FROM " + USER_TABLE_NAME + " WHERE " + KEY_EMAIL + " = '" + email + "';";
+        Cursor c = db.rawQuery(query, null);
+        c.close();
+        return null;
+    }
+
 }
-
-    /*
-    /*
-    This class will handle all events relating to the SQLite database. It will act
-    as a driver. We will be able to create a new table, edit rows and cols, insert
-    data into table, and all other SQL actions.
-     /
-
-    private static final String TAG = "DatabaseHelper";
-
-    private String TABLE_NAME = "";
-    private static final String COL1 = "id";
-    private static final String COL2 = "first_name";
-    private static final String COL3 = "last_name";
-    private static final String COL4 = "email";
-    private static final String COL5 = "password";
-    private static final String COL6 = "race";
-    private static final String COL7 = "gender";
-    private static final String COL8 = "age";
-    private static final String COL9 = "height";
-    private static final String COL10 = "weight";
-    private static final String COL11 = "goals";
-    private static final String COL12 = "gym_id";
-    private static final String COL13 = "pr_list";
-    private static final String COL14 = "brother_list";
-    //IN THAT ORDER ^^
-
-    public DatabaseHelper(Context context, String table_name)
-    {
-        super(context, table_name, null, 1);
-        TABLE_NAME = table_name;
-    }
-
-    @Override
-    public void onCreate(SQLiteDatabase db)
-    {
-        String createTable = "CREATE TABLE " +
-                TABLE_NAME + " (ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                COL2 + " TEXT, " +
-                COL3 + " TEXT, " +
-                COL4 + " TEXT, " +
-                COL5 + " TEXT, " +
-                COL6 + " TEXT, " +
-                COL7 + " TEXT, " +
-                COL8 + " INTEGER, " +
-                COL9 + " INTEGER, " +
-                COL10 + " INTEGER, " +
-                COL11 + " TEXT, " +
-                COL12 + " TEXT, " +
-                COL13 + " INTEGER, " +
-                COL14 + " TEXT";
-        db.execSQL(createTable);
-    }
-
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int i, int i1)
-    {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
-        onCreate(db);
-    }
-
-    public void createTable(String table_name)
-    {
-
-    }
-
-    public boolean addFirstName(String item)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(COL2, item);
-
-        Log.d(TAG, "addData: Adding " + item + " to " + TABLE_NAME);
-
-        long result = db.insert(TABLE_NAME, null, contentValues);
-
-        //if date as inserted incorrectly it will return -1
-        if (result == -1)
-            return false;
-        else
-            return true;
-    }
-
-    public boolean addLastName(String lastName)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(COL3, lastName);
-
-        Log.d(TAG, "addData: Adding " + lastName + " to " + TABLE_NAME);
-
-        long result = db.insert(TABLE_NAME, null, contentValues);
-
-        //if date as inserted incorrectly it will return -1
-        if (result == -1)
-            return false;
-        else
-            return true;
-    }
-
-    public boolean addAge(int age)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(COL6, age);
-
-        Log.d(TAG, "addData: Adding " + age + " to " + TABLE_NAME);
-
-        long result = db.insert(TABLE_NAME, null, contentValues);
-
-        //if date as inserted incorrectly it will return -1
-        if (result == -1)
-            return false;
-        else
-            return true;
-    }
-
-    //Returns all data from the database
-    public Cursor getData()
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT * FROM " + TABLE_NAME;
-        Cursor data = db.rawQuery(query, null);
-        return data;
-    }
-
-
-    //Returns ID that matches the name passed in
-    //@param firstName
-    //@return ID
-    public Cursor getItemIDByFirstName(String firstName)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT " + COL1 + " FROM " + TABLE_NAME + " WHERE " + COL2 + " = '" + firstName + "'";
-        Cursor data = db.rawQuery(query, null);
-        return data;
-    }
-
-    public Cursor getItemIDByLastName(String lastName)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT " + COL1 + " FROM " + TABLE_NAME + " WHERE " + COL3 + " = '" + lastName + "'";
-        Cursor data = db.rawQuery(query, null);
-        return data;
-    }
-
-    public Cursor getItemIDByEmail(String email)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT " + COL1 + " FROM " + TABLE_NAME + " WHERE " + COL4 + " = '" + email + "'";
-        if (query == null)
-            return null;
-
-        Cursor data = db.rawQuery(query, null);
-        return data;
-    }
-
-    public Cursor getItemIDByPassword(String pass)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT " + COL1 + " FROM " + TABLE_NAME + " WHERE " + COL5 + " = '" + pass + "'";
-
-        Cursor data = db.rawQuery(query, null);
-        return data;
-    }
-
-    //Updates the name field
-    //@params newName, id, oldName
-    public void updateName(String newName, int id, String oldName)
-    {
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "UPDATE " + TABLE_NAME + " SET " + COL2 + " = '" + id + "'" + " AND " + COL2 + " = '" + oldName + "'";
-
-        Log.d(TAG, "updateName: query: " + query);
-        Log.d(TAG, "updateName: Setting name to " + newName);
-
-        db.execSQL(query);
-    }
-
-    public void deleteName(int id, String name){
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "DELETE FROM " + TABLE_NAME + " WHERE " + COL1 + " = '" + id + "'" + " AND " + COL2 + " = '" + name + "'";
-
-        Log.d(TAG, "deleteName: query: " + query);
-        Log.d(TAG, "deleteName: Deleting " + name + " from database.");
-
-        db.execSQL(query);
-    }
-}
-*/
