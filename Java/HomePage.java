@@ -5,6 +5,7 @@ import androidx.cardview.widget.CardView;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -15,51 +16,31 @@ import java.util.ArrayList;
 
 public class HomePage extends AppCompatActivity {
 
-    //private final String userID = getIntent().getStringExtra("userID");
+    private static final String TAG = "HOMEPAGE";
+
+    private int userID = -1;
+    private User u = null;
+    private DatabaseHelper db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home_page);
 
+        userID = getIntent().getIntExtra("userID", -1);
+        Log.d(TAG, "USER ID: " + userID);
 
-        //Add elements to the Scroll ListView
-        ListView listView = (ListView) findViewById(R.id.BrothersList);
-        final ArrayList<String> elements = new ArrayList<String>();
-        elements.add("Brother 1");
-        elements.add("Brother 2");
-        elements.add("Brother 3");
-        elements.add("Brother 4");
-        elements.add("Brother 5");
-        elements.add("Brother 6");
-        elements.add("Brother 7");
-        elements.add("Brother 8");
-        elements.add("Brother 1");
-        elements.add("Brother 2");
-        elements.add("Brother 3");
-        elements.add("Brother 4");
-        elements.add("Brother 5");
-        elements.add("Brother 6");
-        elements.add("Brother 7");
-        elements.add("Brother 8");
-        elements.add("Brother 1");
-        elements.add("Brother 2");
-        elements.add("Brother 3");
-        elements.add("Brother 4");
-        elements.add("Brother 5");
-        elements.add("Brother 6");
-        elements.add("Brother 7");
-        elements.add("Brother 8");
-        ArrayAdapter arrayAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, elements);
-        listView.setAdapter(arrayAdapter);
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                Toast.makeText(HomePage.this, "Clicked Item: " + position + " " + elements.get(position).toString(), Toast.LENGTH_SHORT).show();
+        db = new DatabaseHelper(this);
 
-                return false;
-            }
-        });
+        for (User user : db.getAllUsers())
+        {
+            if (user.getID() == userID)
+                u = user;
+        }
+
+        //Initialize Brother List listview
+        if (u != null)
+            fillBrotherList();
 
         // Handle Click Events on Chat Button object
         CardView chatButton = (CardView) findViewById(R.id.ChatButton);
@@ -95,6 +76,20 @@ public class HomePage extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 openProfileActivity();
+            }
+        });
+    }
+
+    private void fillBrotherList()
+    {
+        ListView listView = (ListView) findViewById(R.id.BrothersList);
+        ArrayAdapter arrayAdapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, u.getBrothersList());
+        listView.setAdapter(arrayAdapter);
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText(HomePage.this, "Clicked Item: " + position + " " + u.getBrothersList().get(position).toString(), Toast.LENGTH_SHORT).show();
+                return false;
             }
         });
     }
