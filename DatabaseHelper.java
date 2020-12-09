@@ -1,4 +1,4 @@
-package com.example.sqltest;
+package com.example.gymrattrial3;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -14,7 +14,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String LOG = "DATABASEHELPER";
     private static final String DATABASE_NAME = "USER DATABASE";
-    private static final int VERSION = 2;
+    private static final int VERSION = 4;
 
     //There will be three tables:   1. Holds the basic user information
     //                              2. Holds the PRs for each user
@@ -27,11 +27,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String KEY_ID = "id";
 
     //User Table
-    // __________________________________________________________________
-    // |ID|firstname|lastname|email|password|race|gender|   |   |   |    |
-    // |  |         |        |     |        |    |      |   |   |   |    |
-    // |  |         |        |     |        |    |      |   |   |   |    |
-    // |__|_________|________|_____|________|____|______|___|___|___|____|
+    // __________________________________________________________________________
+    // |ID|firstname|lastname|email|password|race|gender|height|weight|goals|    |
+    // |  |         |        |     |        |    |      |      |      |     |    |
+    // |  |         |        |     |        |    |      |      |      |     |    |
+    // |__|_________|________|_____|________|____|______|______|______|_____|____|
     private static final String USER_TABLE_NAME = "user_table";
     private static final String KEY_FIRST_NAME = "first_name";
     private static final String KEY_LAST_NAME = "last_name";
@@ -69,12 +69,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             MILE_PR + " INTEGER);";
 
     //Brothers Table
+    /*  __________________
+        |id|brother_1|...|
+        |  |         |   | ...
+        |__|_________|___|
+     */
     public static final String BROTHERS_TABLE_NAME = "brothers_table";
     public static final String BROTHER_1 = "brother_1";
     public static final String CREATE_BROTHERS_TABLE = "CREATE TABLE IF NOT EXISTS " + BROTHERS_TABLE_NAME + " (" +
             KEY_ID + " INTEGER, " +
             BROTHER_1 + " TEXT);";
-
 
 
     public DatabaseHelper(Context context)
@@ -100,26 +104,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public int getIDByEmail(String email)
+    public User getUserByEmail(String email)
     {
         //We will assume that the name is the first name
-        SQLiteDatabase db = this.getWritableDatabase();
-        String query = "SELECT " + KEY_ID + " FROM " + USER_TABLE_NAME + " WHERE " + KEY_EMAIL + " = '" + email + "';";
-        Cursor c = db.rawQuery(query, null);
+        ArrayList<User> allUsers = getAllUsers();
+        for (User u : allUsers)
+            if (u.getEmail().equalsIgnoreCase(email))
+                return u;
 
-        Integer id = null;
-        if (c.moveToFirst())
-        {
-            id = c.getInt(c.getColumnIndex(KEY_ID));
-        }
-        c.close();
-
-        return id;
+        return null;
     }
 
     public boolean addUser(User u)
     {
         SQLiteDatabase db = this.getWritableDatabase();
+
+        String email1 = u.getEmail();
+        for (User user : getAllUsers())
+        {
+            if (email1.equalsIgnoreCase(user.getEmail()))
+            {
+                return false;
+            }
+        }
 
         //1. Add user data to USER_TABLE
         ContentValues values = new ContentValues();
@@ -143,9 +150,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         if (id == -1)
             return false;
         u.setID(id);
-        values = new ContentValues();
-        values.put(KEY_ID, u.getID());
-        db.insert(USER_TABLE_NAME, null, values);
+        updateUser(u);
 
         //2. Add user PR list to PR_TABLE
         values = new ContentValues();
@@ -189,6 +194,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return true;
     }
 
+    //The email cannot be updated through this method, since it is used for reference
     public void updateUser(String email, String col, String value)
     {
         if (!isColumn(col))
@@ -212,6 +218,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    //This is the intended use of this method
+    // 1. Outside class gets list of all users from getAllUsers().
+    // 2. Outside class modifies one or more users in some way.
+    // 3. Outside class passes user list back to DatabaseHelper through this method.
+    // 4. DatabaseHelper updates all users with the modified info.
     public void updateUsers(ArrayList<User> userList)
     {
         for (User u : userList)
