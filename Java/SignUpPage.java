@@ -23,10 +23,18 @@ import com.google.firebase.auth.FirebaseAuthException;
 
 public class SignUpPage extends AppCompatActivity {
 
-    FirebaseAuth auth;
     private static final String TAG = "SignUpPage";
 
     DatabaseHelper db;
+    FirebaseAuth auth;
+
+    EditText firstNameField;
+    EditText lastNameField;
+    EditText emailField;
+    EditText password1Field;
+    EditText password2Field;
+
+    String email = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,26 +44,47 @@ public class SignUpPage extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
         db = new DatabaseHelper(this);
 
+        firstNameField = (EditText)findViewById(R.id.FirstNameField);
+        lastNameField = (EditText)findViewById(R.id.LastNameField);
+        emailField = (EditText)findViewById(R.id.EmailField);
+        password1Field = (EditText)findViewById(R.id.PasswordField);
+        password2Field = (EditText)findViewById(R.id.ConfirmPasswordField);
+
         CardView signUpButton = (CardView)findViewById(R.id.SignUpButton);
 
         signUpButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                User u = new User();
+                if (allFieldsValid()) {
 
-                String firstName = ((EditText)findViewById(R.id.FirstNameField)).getText().toString();
-                u.setName(firstName);
+                    ((ProgressBar)findViewById(R.id.SignUpProgressBar)).setVisibility(View.VISIBLE);
 
-                //DELETE AFTER TESTING
-                startCreateProfilePage();
+                    User u = new User();
 
+                    String firstName = firstNameField.getText().toString();
+                    String lastName = lastNameField.getText().toString();
+                    email = emailField.getText().toString();
+                    String password = password1Field.getText().toString();
+
+                    u.setFirstName(firstName);
+                    u.setLastName(lastName);
+                    u.setEmail(email);
+                    u.setPassword(password);
+
+                    boolean success = db.addUser(u);
+
+                    if (success) {
+                        ((ProgressBar)findViewById(R.id.SignUpProgressBar)).setVisibility(View.INVISIBLE);
+                        startCreateProfilePage();
+                    }
+                    else
+                        toastMessage("ERROR: FAILED TO ADD USER TO DATABASE");
+                }
 
                 /*if (allFieldsValid())
                 {
                     String email = ((EditText)findViewById(R.id.EmailField)).getText().toString();
                     String password = ((EditText)findViewById(R.id.PasswordField)).getText().toString();
-
-                    ((ProgressBar)findViewById(R.id.SignUpProgressBar)).setVisibility(View.VISIBLE);
 
                     auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                         @Override
@@ -90,18 +119,12 @@ public class SignUpPage extends AppCompatActivity {
     public void startCreateProfilePage()
     {
         Intent intent = new Intent(this, CreateProfilePage.class);
-        //intent.putExtras("DATABASEHELPER", db);
+        intent.putExtra("EMAIL", email);
         startActivity(intent);
     }
 
     private boolean allFieldsValid()
     {
-        EditText firstNameField = (EditText)findViewById(R.id.FirstNameField);
-        EditText lastNameField = (EditText)findViewById(R.id.LastNameField);
-        EditText emailField = (EditText)findViewById(R.id.EmailField);
-        EditText password1Field = (EditText)findViewById(R.id.PasswordField);
-        EditText password2Field = (EditText)findViewById(R.id.ConfirmPasswordField);
-
         String firstName = firstNameField.getText().toString();
         String lastName = lastNameField.getText().toString();
         String email = emailField.getText().toString();
@@ -160,16 +183,6 @@ public class SignUpPage extends AppCompatActivity {
 
         return true;
     }
-
-    /*public void addData(String newEntry) {
-        boolean insertData = db.addData(newEntry);
-
-        if (insertData) {
-            toastMessage("Data Successfully Inserted!");
-        } else {
-            toastMessage("Something went wrong");
-        }
-    }*/
 
     private void toastMessage(String message)
     {
