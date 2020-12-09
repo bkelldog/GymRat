@@ -20,6 +20,8 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 
+import java.util.ArrayList;
+
 public class LoginPage extends AppCompatActivity {
 
     /*
@@ -35,8 +37,10 @@ public class LoginPage extends AppCompatActivity {
     private static final String TAG = "LoginPage";
 
     FirebaseAuth auth;
-    private String userID;
+    private int userID;
     private DatabaseHelper db;
+    private String email;
+    private String password;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,37 +49,45 @@ public class LoginPage extends AppCompatActivity {
 
         CardView loginButton = (CardView)findViewById(R.id.LoginButton);
 
-        Log.d(TAG, "Login created");
-
-
         loginButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String email = ((EditText)findViewById(R.id.editEmail)).getText().toString();
-                String password = ((EditText)findViewById(R.id.editPassword)).getText().toString();
+                email = ((EditText)findViewById(R.id.editEmail)).getText().toString();
+                password = ((EditText)findViewById(R.id.editPassword)).getText().toString();
 
                 if (validate(email, password))
                     startHomePageActivity();
+                else
+                    Toast.makeText(LoginPage.this, "INVALID LOGIN CREDENTIALS", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private boolean validate(String email, String password)
     {
-        //if (!allFieldsValid())
-        //    return false;
-        ((ProgressBar) findViewById(R.id.LoginProgressBar)).setVisibility(View.VISIBLE);
-        Log.d(TAG, "IN VALIDATE");
+        if (!allFieldsValid())
+            return false;
+        ((ProgressBar)findViewById(R.id.LoginProgressBar)).setVisibility(View.VISIBLE);
 
         //First, validate against SQLite database
         db = new DatabaseHelper(this);
-        EditText emailField = (EditText)findViewById(R.id.editEmail);
-        if (emailField.getText().toString() == null)
-            return false;
-        db.addUser(new User(emailField.getText().toString()));
-        Log.d(TAG, db.getAllUsers().get(0).toString());
+        ArrayList<User> allUsers = db.getAllUsers();
+        for (User u : allUsers)
+        {
+            String em = u.getEmail();
+            String pass = u.getPassword();
+            if (em != null && em.equalsIgnoreCase(email))
+            {
+                if (pass != null && pass.equalsIgnoreCase(password))
+                {
+                    userID = u.getID();
+                    return true;
+                }
+            }
+        }
 
-return true;
+        return false;
+
         /*if (db.getItemIDByEmail(email) != null)
         {
             if (db.getItemIDByPassword(password) != null)
@@ -113,6 +125,7 @@ return true;
     private void startHomePageActivity()
     {
         Intent intent = new Intent(this, HomePage.class);
+        Log.d(TAG, "STARTING HOME PAGE: " + userID);
         intent.putExtra("userID", userID);
         startActivity(intent);
     }
