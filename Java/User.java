@@ -16,7 +16,7 @@ public class User {
     private ArrayList<String> gymIDs = new ArrayList<String>();
     private ArrayList<String> brotherList = new ArrayList<String>();
 
-    public User (){}
+    public User(){};
 
     public User(String firstName)
     {this.firstName = firstName;}
