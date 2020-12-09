@@ -14,7 +14,7 @@ import java.util.ArrayList;
 
 public class ProfilePage extends AppCompatActivity {
 
-    private final String userID = getIntent().getStringExtra("userID");
+    //private final String userID = getIntent().getStringExtra("userID");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,7 +88,10 @@ public class ProfilePage extends AppCompatActivity {
     //Method will search for PR data is SQLite Database, and either add to listView, or add values of 0.
     private void populatePRList()
     {
+        ArrayList<String> brothers = new ArrayList<String>();
+
         //1. Check for data in SQLite database
+
 
         //2. If data is there, add to list.
 
