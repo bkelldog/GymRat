@@ -6,6 +6,7 @@ import androidx.cardview.widget.CardView;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ProgressBar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -14,7 +15,6 @@ public class MainActivity extends AppCompatActivity {
     There will be two buttons, and the GymRat logo on top.
     Program will listen for the user to select either button, then open the corresponding activity.
      */
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,12 +41,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void startLoginPage()
     {
+        ((ProgressBar)findViewById(R.id.progressBar)).setVisibility(View.VISIBLE);
         Intent intent = new Intent(this, LoginPage.class);
         startActivity(intent);
     }
 
     private void startSignUpPage()
     {
+        ((ProgressBar)findViewById(R.id.progressBar)).setVisibility(View.VISIBLE);
         Intent intent = new Intent(this, SignUpPage.class);
         startActivity(intent);
     }
