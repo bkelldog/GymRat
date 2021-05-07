@@ -1,0 +1,65 @@
+package com.example.gymrattrial4;
+
+import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import java.util.ArrayList;
+
+public class ChatDatabaseHelper extends SQLiteOpenHelper {
+
+    private static final String TAG = "Chat Database Helper";
+
+    //Initialization
+    private static final String DATABASE_NAME = "ChatDatabase";
+    private static final int VERSION = 1;
+
+    //Chat Logs
+    /*
+    Every text conversation will be stored as a table in this database.
+    It will have five columns:
+                              message_id,
+                              sender_id,
+                              timestamp,
+                              message_text,
+                              media_path;
+     And it will be sorted by timestamp, in descending order (i.e. oldest
+     messages at the bottom of the table, and top of the chat fragment).
+     */
+    private ArrayList<String> tableNames = new ArrayList<String>();
+    private static final String createTable = "CREATE TABLE ";
+    private static final String createTable2 = "(time_sent TIMESTAMP NOT NULL," +
+                                                "sender_id VARCHAR(9) NOT NULL," +
+                                                "message_id VARCHAR(9) NOT NULL," +
+                                                "message_text TEXT," +
+                                                "media_path TEXT," +
+                                                "PRIMARY KEY (sender_id, time_sent);";
+
+    public ChatDatabaseHelper(Context context)
+    {
+        super(context, DATABASE_NAME, null, VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        for (String name : tableNames)
+            db.execSQL(createTable + name + createTable2);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        for (String name : tableNames)
+            db.execSQL("DROP TABLE IF EXISTS " + name);
+        onCreate(db);
+    }
+
+    public void createTable(String tableName)
+    {
+        if (!tableName.equalsIgnoreCase(""))
+        {
+            SQLiteDatabase db = this.getWritableDatabase();
+            tableNames.add(tableName);
+            db.execSQL(createTable + tableName + createTable2);
+        }
+    }
+}
